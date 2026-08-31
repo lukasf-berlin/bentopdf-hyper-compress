@@ -50,7 +50,7 @@ Hyper Compress is built around solving these three problems.
 
 * **Content preserving compression.** Hyper includes a true lossless mode for compression without image re encoding or quality loss. For more aggressive compression, it preserves searchable text and document structure while making only the changes required by the selected compression level all while producing a conforming PDF.
 
-* **Built for reliability.** Hyper validates its output and verifies transformations that can affect visual fidelity. When a change cannot reproduce a page faithfully, it is rolled back. Across the benchmark, Hyper had a **0.39% corruption rate**, the lowest of any engine measured.
+* **Built for reliability.** Hyper validates its output and verifies transformations that can affect visual fidelity. When a change cannot reproduce a page faithfully, it is rolled back. Across the benchmark, Hyper had a **0.39% corruption rate** — the lowest among engines with comparable feature coverage (qpdf's 0.05% reflects a narrower, lossless-only feature set; see the robustness table below).
 
 * **One engine, everywhere.** The same compression engine powers the CLI, Node SDK, C API, self-hosted service, and WebAssembly build.
 
@@ -231,6 +231,21 @@ Depending on the document and selected options, the engine can:
 * optionally rasterise pages when the document is genuinely image-only
 
 The engine applies multiple techniques mentioned above to achieve best possible compression.
+
+---
+
+# What the Engine Refuses to Do
+
+Hyper is built around a hard boundary: nothing that changes what the document *says*, only how it's stored.
+
+* Never touches a signed document. If a signature is detected, compression is skipped entirely and the file is re-saved incrementally, exactly as PDF signing requires.
+* Never re-encodes images in lossless mode — pixel data, downsampling, grayscale conversion, and JPX/clip transforms are all disabled.
+* Never removes form fields, annotations, bookmarks, metadata, or embedded files unless explicitly requested via an option — none of these are touched by default.
+* Never rasterises a page that has real text, even if rasterisation is requested — the engine checks for a text layer first and skips if one is found.
+* Never guesses a password. Encrypted input requires the correct password via `--password`/`password`, or the file is left unprocessed.
+* Never silently degrades below a floor: `--target-size` will tell you when a target isn't reachable rather than producing an unreadable file to hit a number.
+
+If a transformation can't be verified as faithful, it's rolled back rather than shipped — see "Built for reliability" above.
 
 ---
 
